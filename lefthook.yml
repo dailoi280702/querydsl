@@ -4,7 +4,7 @@ pre-commit:
   commands:
     gci:
       glob: "*.go"
-      run: gci write -s standard -s default -s "Prefix(querydsl)" {staged_files}
+      run: gci write -s standard -s default -s "Prefix(github.com/dailoi280702/querydsl)" {staged_files}
     gofumpt:
       glob: "*.go"
       run: gofumpt -w {staged_files}

@@ -4,7 +4,7 @@ package parser
 import (
 	"testing"
 
-	"querydsl/lexer"
+	"github.com/dailoi280702/querydsl/lexer"
 )
 
 func TestParseExpression(t *testing.T) {

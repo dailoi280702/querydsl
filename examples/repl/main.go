@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"querydsl"
+	"github.com/dailoi280702/querydsl"
 )
 
 func main() {

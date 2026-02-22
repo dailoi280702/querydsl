@@ -4,8 +4,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"querydsl"
-	"querydsl/parser/ast"
+	"github.com/dailoi280702/querydsl"
+	"github.com/dailoi280702/querydsl/parser/ast"
 )
 
 // --- Domain/Service Layer ---

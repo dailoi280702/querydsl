@@ -4,8 +4,8 @@ package sql
 import (
 	"testing"
 
-	"querydsl/lexer"
-	"querydsl/parser"
+	"github.com/dailoi280702/querydsl/lexer"
+	"github.com/dailoi280702/querydsl/parser"
 )
 
 func TestCompile(t *testing.T) {

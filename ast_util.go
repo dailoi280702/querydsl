@@ -1,6 +1,6 @@
 package querydsl
 
-import "querydsl/parser/ast"
+import "github.com/dailoi280702/querydsl/parser/ast"
 
 // CombineAnd joins multiple AST nodes with the logical AND operator.
 // It handles nil nodes gracefully.

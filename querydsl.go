@@ -4,11 +4,12 @@ package querydsl
 import (
 	"fmt"
 	"log/slog"
-	"querydsl/compiler/sql"
-	"querydsl/lexer"
-	"querydsl/parser"
-	"querydsl/parser/ast"
 	"strings"
+
+	"github.com/dailoi280702/querydsl/compiler/sql"
+	"github.com/dailoi280702/querydsl/lexer"
+	"github.com/dailoi280702/querydsl/parser"
+	"github.com/dailoi280702/querydsl/parser/ast"
 )
 
 // QueryTranspiler defines the abstract interface for converting DSL

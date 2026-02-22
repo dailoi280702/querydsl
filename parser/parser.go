@@ -4,8 +4,8 @@ package parser
 
 import (
 	"fmt"
-	"querydsl/lexer"
-	"querydsl/parser/ast"
+	"github.com/dailoi280702/querydsl/lexer"
+	"github.com/dailoi280702/querydsl/parser/ast"
 	"strings"
 )
 

@@ -2,7 +2,7 @@ package querydsl
 
 import (
 	"fmt"
-	"querydsl/parser/ast"
+	"github.com/dailoi280702/querydsl/parser/ast"
 )
 
 // Validate checks the given AST node against the provided schema.

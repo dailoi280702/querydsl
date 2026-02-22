@@ -1,9 +1,10 @@
 // Package sql implements the SQL compiler for the QueryDSL.
+//nolint:revive
 package sql
 
 import (
 	"fmt"
-	"querydsl/parser/ast"
+	"github.com/dailoi280702/querydsl/parser/ast"
 	"strconv"
 	"strings"
 )

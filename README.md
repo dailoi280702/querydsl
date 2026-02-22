@@ -22,7 +22,7 @@ go get querydsl
 ## Quick Start
 
 ```go
-import "querydsl"
+import "github.com/dailoi280702/querydsl"
 
 // Simple one-liner
 where, args, err := querydsl.ToSQL(`status == "active" && age >= 18`)
