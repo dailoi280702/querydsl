@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"github.com/dailoi280702/querydsl/parser/ast"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/dailoi280702/querydsl/parser/ast"
 )
 
 func TestToSQL(t *testing.T) {
@@ -183,62 +182,6 @@ func TestToSQLWithOptions(t *testing.T) {
 		if !tt.wantErr && sql != tt.expectedSQL {
 			t.Errorf("ToSQL(%q) SQL = %q, want %q", tt.input, sql, tt.expectedSQL)
 		}
-	}
-}
-
-func TestDateConversion(t *testing.T) {
-	cfg := NewConfig().WithSchema(Schema{
-		"created_at": FieldRule{Type: "date"},
-		"updated_at": FieldRule{Type: "datetime"},
-	})
-
-	input := `created_at > "2023-01-01" && updated_at < "2023-01-01T15:00:00Z"`
-	_, args, err := ToSQL(input, cfg)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if len(args) != 2 {
-		t.Fatalf("expected 2 args, got %d", len(args))
-	}
-
-	if _, ok := args[0].(time.Time); !ok {
-		t.Errorf("expected arg 0 to be time.Time, got %T", args[0])
-	}
-
-	if _, ok := args[1].(time.Time); !ok {
-		t.Errorf("expected arg 1 to be time.Time, got %T", args[1])
-	}
-}
-
-func TestDateTimeComparison(t *testing.T) {
-	cfg := NewConfig().WithSchema(Schema{
-		"created_at": FieldRule{Type: "datetime"},
-	})
-
-	input := `created_at > "2023-01-01T15:00:00Z"`
-	sql, args, err := ToSQL(input, cfg)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if sql != "(created_at > ?)" {
-		t.Errorf("expected SQL=(created_at > ?), got %q", sql)
-	}
-
-	if len(args) != 1 {
-		t.Fatalf("expected 1 arg, got %d", len(args))
-	}
-
-	val, ok := args[0].(time.Time)
-	if !ok {
-		t.Fatalf("expected arg to be time.Time, got %T", args[0])
-	}
-
-	// Verify the value was parsed correctly
-	expectedTime, _ := time.Parse(time.RFC3339, "2023-01-01T15:00:00Z")
-	if !val.Equal(expectedTime) {
-		t.Errorf("expected time %v, got %v", expectedTime, val)
 	}
 }
 
@@ -448,6 +391,84 @@ func TestLogger(t *testing.T) {
 	_, _, err := ToSQL(`name == "John"`, cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestDateConversion(t *testing.T) {
+	cfg := NewConfig().WithSchema(Schema{
+		"created_at": FieldRule{Type: "date"},
+		"updated_at": FieldRule{Type: "datetime"},
+	})
+
+	input := `created_at > "2023-01-01" && updated_at < "2023-01-01T15:00:00Z"`
+	_, args, err := ToSQL(input, cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(args) != 2 {
+		t.Fatalf("expected 2 args, got %d", len(args))
+	}
+
+	if _, ok := args[0].(time.Time); !ok {
+		t.Errorf("expected arg 0 to be time.Time, got %T", args[0])
+	}
+
+	if _, ok := args[1].(time.Time); !ok {
+		t.Errorf("expected arg 1 to be time.Time, got %T", args[1])
+	}
+}
+
+func TestDateTimeComparison(t *testing.T) {
+	cfg := NewConfig().WithSchema(Schema{
+		"created_at": FieldRule{Type: "datetime"},
+	})
+
+	input := `created_at > "2023-01-01T15:00:00Z"`
+	sql, args, err := ToSQL(input, cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if sql != "(created_at > ?)" {
+		t.Errorf("expected SQL=(created_at > ?), got %q", sql)
+	}
+
+	if len(args) != 1 {
+		t.Fatalf("expected 1 arg, got %d", len(args))
+	}
+
+	val, ok := args[0].(time.Time)
+	if !ok {
+		t.Fatalf("expected arg to be time.Time, got %T", args[0])
+	}
+
+	// Verify the value was parsed correctly
+	expectedTime, _ := time.Parse(time.RFC3339, "2023-01-01T15:00:00Z")
+	if !val.Equal(expectedTime) {
+		t.Errorf("expected time %v, got %v", expectedTime, val)
+	}
+}
+
+func TestComplexInOperator(t *testing.T) {
+	cfg := NewConfig().WithSchema(Schema{
+		"status": FieldRule{Type: "string"},
+		"id":     FieldRule{Type: "int"},
+	})
+
+	input := `status in ["active", "pending"] && (id == 1 || id == 2)`
+	sql, args, err := ToSQL(input, cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expectedSQL := "((status IN (?, ?)) AND ((id = ?) OR (id = ?)))"
+	if sql != expectedSQL {
+		t.Errorf("expected SQL=%q, got %q", expectedSQL, sql)
+	}
+
+	if len(args) != 4 {
+		t.Errorf("expected 4 args, got %d", len(args))
 	}
 }
 
