@@ -7,16 +7,28 @@ import (
 	"os"
 
 	"github.com/dailoi280702/querydsl"
+	"github.com/dailoi280702/querydsl/parser/ast"
 )
 
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
-	fmt.Println("QueryDSL REPL")
+	fmt.Println("QueryDSL REPL (Postgres + Similarity Hook on 'name')")
 	fmt.Println("Type 'exit' to quit")
 	fmt.Println("-----------------")
 
-	// Standard config for debugging
-	cfg := querydsl.NewConfig().WithPostgres()
+	// Custom hook for similarity on 'name' field
+	customHook := func(n *ast.InfixExpression, walk func(ast.Node, string) (string, error)) (string, bool, error) {
+		if n.Operator == "%" {
+			if ident, ok := n.Left.(*ast.Identifier); ok && ident.Value == "name" {
+				left, _ := walk(n.Left, "")
+				right, _ := walk(n.Right, "")
+				return fmt.Sprintf("unaccent(lower(%s)) %% unaccent(lower(%s))", left, right), true, nil
+			}
+		}
+		return "", false, nil
+	}
+
+	cfg := querydsl.NewConfig().WithPostgres().WithCustomInfix(customHook)
 
 	for {
 		fmt.Print("dsl> ")

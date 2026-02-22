@@ -385,6 +385,36 @@ func TestExtraBehavior(t *testing.T) {
 	}
 }
 
+func TestCustomInfixHook(t *testing.T) {
+	customHook := func(n *ast.InfixExpression, walk func(ast.Node, string) (string, error)) (string, bool, error) {
+		// Only apply special logic if operator is % and field is "name"
+		if n.Operator == "%" {
+			if ident, ok := n.Left.(*ast.Identifier); ok && ident.Value == "name" {
+				left, _ := walk(n.Left, "")
+				right, _ := walk(n.Right, "")
+				return fmt.Sprintf("unaccent(lower(%s)) %% unaccent(lower(%s))", left, right), true, nil
+			}
+		}
+		return "", false, nil
+	}
+
+	cfg := NewConfig().WithCustomInfix(customHook)
+	input := `name % "John"`
+	sql, args, err := ToSQL(input, cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expectedSQL := "unaccent(lower(name)) % unaccent(lower(?))"
+	if sql != expectedSQL {
+		t.Errorf("expected SQL=%q, got %q", expectedSQL, sql)
+	}
+
+	if len(args) != 1 || args[0] != "John" {
+		t.Errorf("expected arg John, got %v", args)
+	}
+}
+
 func TestLogger(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	cfg := NewConfig().WithLogger(logger)

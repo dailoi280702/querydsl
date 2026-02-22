@@ -50,6 +50,7 @@ func (b *SQLBackend) Transpile(node ast.Node, cfg Config) (string, []any, error)
 		AllowedFields: cfg.AllowedFields,
 		FieldTypes:    fieldTypes,
 		Placeholder:   cfg.Placeholder,
+		CustomInfixes: cfg.CustomInfixes,
 	}
 	compiler := sql.New(sqlCfg)
 	sqlStr, args, err := compiler.Compile(node)

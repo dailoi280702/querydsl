@@ -12,22 +12,27 @@ import (
 	"github.com/dailoi280702/querydsl/parser/ast"
 )
 
+// CustomInfix is a function that can override the default compilation of an infix expression.
+type CustomInfix func(n *ast.InfixExpression, walk func(ast.Node, string) (string, error)) (sql string, handled bool, err error)
+
 // Compiler represents the SQL compiler.
 type Compiler struct {
 	Args          []any
 	fieldMap      map[string]string
 	allowedFields map[string]bool
-	fieldTypes    map[string]string // New: field -> type
+	fieldTypes    map[string]string // field -> type
 	placeholder   string            // "?" or "$"
 	argCount      int
+	customInfixes []CustomInfix
 }
 
 // Config represents the configuration for the SQL compiler.
 type Config struct {
 	FieldMap      map[string]string
 	AllowedFields []string
-	FieldTypes    map[string]string // New
-	Placeholder   string            // "?" or "$"
+	FieldTypes    map[string]string
+	Placeholder   string // "?" or "$"
+	CustomInfixes []CustomInfix
 }
 
 // New creates a new Compiler instance.
@@ -49,6 +54,7 @@ func New(cfg ...Config) *Compiler {
 		if cfg[0].Placeholder != "" {
 			c.placeholder = cfg[0].Placeholder
 		}
+		c.customInfixes = cfg[0].CustomInfixes
 	}
 
 	return c
@@ -174,6 +180,16 @@ func (c *Compiler) compileArray(n *ast.ArrayLiteral, currentFieldType string) (s
 }
 
 func (c *Compiler) compileInfix(n *ast.InfixExpression) (string, error) {
+	for _, hook := range c.customInfixes {
+		sqlStr, handled, err := hook(n, c.walk)
+		if err != nil {
+			return "", err
+		}
+		if handled {
+			return sqlStr, nil
+		}
+	}
+
 	leftType := ""
 	if ident, ok := n.Left.(*ast.Identifier); ok {
 		leftType = c.fieldTypes[ident.Value]

@@ -73,16 +73,33 @@ type UserPostgresRepo struct {
 }
 
 func (r *UserPostgresRepo) FindAll(_ context.Context, node ast.Node, cfg querydsl.Config) ([]User, error) {
-	// 1. Add Infrastructure details (Field Mapping + Dialect)
-	cfg = cfg.WithMapping("name", "full_name").WithPostgres()
+	// 1. Define custom hook for similarity operator on 'name' field
+	customSimilarityHook := func(n *ast.InfixExpression, walk func(ast.Node, string) (string, error)) (string, bool, error) {
+		// Only override if operator is % and target is 'name'
+		if n.Operator == "%" {
+			if ident, ok := n.Left.(*ast.Identifier); ok && ident.Value == "name" {
+				left, _ := walk(n.Left, "")
+				right, _ := walk(n.Right, "")
+				// Return custom SQL using Postgres unaccent extension
+				return fmt.Sprintf("unaccent(lower(%s)) %% unaccent(lower(%s))", left, right), true, nil
+			}
+		}
+		return "", false, nil
+	}
 
-	// 2. Perform the actual transpilation using the node
+	// 2. Add Infrastructure details (Field Mapping + Dialect + Custom Hook)
+	cfg = cfg.
+		WithMapping("name", "full_name").
+		WithPostgres().
+		WithCustomInfix(customSimilarityHook)
+
+	// 3. Perform the actual transpilation using the node
 	where, args, err := r.transpiler.Transpile(node, cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	// 3. Execute the safe query
+	// 4. Execute the safe query
 	fullQuery := fmt.Sprintf("SELECT id, full_name, age FROM users WHERE %s", where)
 	fmt.Println("Repository Executing SQL:", fullQuery)
 	fmt.Printf("Repository Using Args: %v\n", args)
@@ -99,8 +116,8 @@ func main() {
 	repo := &UserPostgresRepo{transpiler: sqlBackend}
 	usecase := NewUserUsecase(repo, sqlBackend)
 
-	// 2. Raw input from user (e.g., from URL ?q=...)
-	userInput := `name == "Alice" && age > 20`
+	// 2. Test with similarity operator
+	userInput := `name % "Álice"`
 	orgID := "123"
 	fmt.Printf("User Input DSL: %s (OrgID: %s)\n", userInput, orgID)
 

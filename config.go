@@ -1,6 +1,9 @@
 package querydsl
 
-import "log/slog"
+import (
+	"github.com/dailoi280702/querydsl/compiler/sql"
+	"log/slog"
+)
 
 // Config represents the configuration for the QueryDSL conversion.
 type Config struct {
@@ -9,6 +12,7 @@ type Config struct {
 	Placeholder   string // "?" or "$"
 	Schema        Schema
 	Logger        *slog.Logger
+	CustomInfixes []sql.CustomInfix
 }
 
 // NewConfig creates a new empty configuration.
@@ -45,6 +49,12 @@ func (c Config) WithPostgres() Config {
 // WithLogger sets the logger for the config.
 func (c Config) WithLogger(l *slog.Logger) Config {
 	c.Logger = l
+	return c
+}
+
+// WithCustomInfix adds a custom compiler hook for infix expressions.
+func (c Config) WithCustomInfix(fn sql.CustomInfix) Config {
+	c.CustomInfixes = append(c.CustomInfixes, fn)
 	return c
 }
 
