@@ -59,8 +59,10 @@ func walkValidate(node ast.Node, schema Schema, found map[string]bool) error {
 
 func validateType(right ast.Expression, rule FieldRule) error {
 	var actualType string
+	var line, col int
 	switch r := right.(type) {
 	case *ast.Literal:
+		line, col = r.Line, r.Column
 		switch r.Type {
 		case ast.StringLiteral:
 			actualType = "string"
@@ -78,13 +80,13 @@ func validateType(right ast.Expression, rule FieldRule) error {
 	if actualType == "string" {
 		if rule.Type == "date" {
 			if _, err := time.Parse("2006-01-02", right.(*ast.Literal).Value); err != nil {
-				return &ValidationError{Message: "invalid date format, expected YYYY-MM-DD", Code: ErrTypeMismatch}
+				return &ValidationError{Message: fmt.Sprintf("[%d:%d] invalid date format, expected YYYY-MM-DD", line, col), Code: ErrTypeMismatch}
 			}
 			return nil
 		}
 		if rule.Type == "datetime" {
 			if _, err := time.Parse(time.RFC3339, right.(*ast.Literal).Value); err != nil {
-				return &ValidationError{Message: "invalid datetime format, expected RFC3339", Code: ErrTypeMismatch}
+				return &ValidationError{Message: fmt.Sprintf("[%d:%d] invalid datetime format, expected RFC3339", line, col), Code: ErrTypeMismatch}
 			}
 			return nil
 		}
@@ -97,9 +99,9 @@ func validateType(right ast.Expression, rule FieldRule) error {
 		}
 
 		if rule.Error != "" {
-			return &ValidationError{Message: rule.Error, Code: ErrTypeMismatch}
+			return &ValidationError{Message: fmt.Sprintf("[%d:%d] %s", line, col, rule.Error), Code: ErrTypeMismatch}
 		}
-		return &ValidationError{Message: fmt.Sprintf("expected type %s, got %s", rule.Type, actualType), Code: ErrTypeMismatch}
+		return &ValidationError{Message: fmt.Sprintf("[%d:%d] expected type %s, got %s", line, col, rule.Type, actualType), Code: ErrTypeMismatch}
 	}
 	return nil
 }

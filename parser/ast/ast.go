@@ -36,7 +36,9 @@ type Expression interface {
 
 // Identifier represents an identifier in an expression.
 type Identifier struct {
-	Value string
+	Value  string
+	Line   int
+	Column int
 }
 
 func (i *Identifier) expressionNode() {}
@@ -46,8 +48,10 @@ func (i *Identifier) String() string { return i.Value }
 
 // Literal represents a literal value.
 type Literal struct {
-	Value string
-	Type  LiteralType
+	Value  string
+	Type   LiteralType
+	Line   int
+	Column int
 }
 
 func (l *Literal) expressionNode() {}

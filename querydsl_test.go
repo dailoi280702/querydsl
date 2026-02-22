@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"github.com/dailoi280702/querydsl/parser/ast"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dailoi280702/querydsl/parser/ast"
 )
 
 func TestToSQL(t *testing.T) {

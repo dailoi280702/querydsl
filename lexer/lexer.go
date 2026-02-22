@@ -13,11 +13,13 @@ type Lexer struct {
 	position     int  // current position in input (points to current char)
 	readPosition int  // current reading position in input (after current char)
 	ch           rune // current char under examination
+	line         int
+	column       int
 }
 
 // New creates a new Lexer instance for the given input.
 func New(input string) *Lexer {
-	l := &Lexer{input: input}
+	l := &Lexer{input: input, line: 1, column: 0}
 	l.readChar()
 	return l
 }
@@ -30,6 +32,13 @@ func (l *Lexer) readChar() {
 		l.ch = r
 		l.position = l.readPosition
 		l.readPosition += size
+
+		if r == '\n' {
+			l.line++
+			l.column = 0
+		} else {
+			l.column++
+		}
 		return
 	}
 	l.position = l.readPosition
@@ -53,78 +62,95 @@ func (l *Lexer) NextToken() Token {
 	switch l.ch {
 	case '=':
 		if l.peekChar() == '=' {
+			line, col := l.line, l.column
 			l.readChar()
-			tok = Token{Type: EQ, Literal: "=="}
+			tok = Token{Type: EQ, Literal: "==", Line: line, Column: col}
 		} else {
-			tok = Token{Type: EQ, Literal: "="}
+			tok = l.newToken(EQ, "=")
 		}
 	case '!':
 		if l.peekChar() == '=' {
+			line, col := l.line, l.column
 			l.readChar()
-			tok = Token{Type: NEQ, Literal: "!="}
+			tok = Token{Type: NEQ, Literal: "!=", Line: line, Column: col}
 		} else {
-			tok = Token{Type: NOT, Literal: "!"}
+			tok = l.newToken(NOT, "!")
 		}
 	case '-':
-		tok = Token{Type: MINUS, Literal: "-"}
+		tok = l.newToken(MINUS, "-")
 	case '>':
 		if l.peekChar() == '=' {
+			line, col := l.line, l.column
 			l.readChar()
-			tok = Token{Type: GTE, Literal: ">="}
+			tok = Token{Type: GTE, Literal: ">=", Line: line, Column: col}
 		} else {
-			tok = Token{Type: GT, Literal: ">"}
+			tok = l.newToken(GT, ">")
 		}
 	case '<':
 		if l.peekChar() == '=' {
+			line, col := l.line, l.column
 			l.readChar()
-			tok = Token{Type: LTE, Literal: "<="}
+			tok = Token{Type: LTE, Literal: "<=", Line: line, Column: col}
 		} else {
-			tok = Token{Type: LT, Literal: "<"}
+			tok = l.newToken(LT, "<")
 		}
 	case '&':
 		if l.peekChar() == '&' {
+			line, col := l.line, l.column
 			l.readChar()
-			tok = Token{Type: AND, Literal: "&&"}
+			tok = Token{Type: AND, Literal: "&&", Line: line, Column: col}
 		} else {
-			tok = Token{Type: ILLEGAL, Literal: "&"}
+			tok = l.newToken(ILLEGAL, "&")
 		}
 	case '|':
 		if l.peekChar() == '|' {
+			line, col := l.line, l.column
 			l.readChar()
-			tok = Token{Type: OR, Literal: "||"}
+			tok = Token{Type: OR, Literal: "||", Line: line, Column: col}
 		} else {
-			tok = Token{Type: ILLEGAL, Literal: "|"}
+			tok = l.newToken(ILLEGAL, "|")
 		}
 	case '%':
-		tok = Token{Type: SIMILAR, Literal: "%"}
+		tok = l.newToken(SIMILAR, "%")
 	case '(':
-		tok = Token{Type: LPAREN, Literal: "("}
+		tok = l.newToken(LPAREN, "(")
 	case ')':
-		tok = Token{Type: RPAREN, Literal: ")"}
+		tok = l.newToken(RPAREN, ")")
 	case '[':
-		tok = Token{Type: LBRACKET, Literal: "["}
+		tok = l.newToken(LBRACKET, "[")
 	case ']':
-		tok = Token{Type: RBRACKET, Literal: "]"}
+		tok = l.newToken(RBRACKET, "]")
 	case ',':
-		tok = Token{Type: COMMA, Literal: ","}
+		tok = l.newToken(COMMA, ",")
 	case '"':
-		tok.Type = STRING
+		line, col := l.line, l.column
 		tok.Literal = l.readString()
+		tok.Type = STRING
+		tok.Line = line
+		tok.Column = col
 	case 0:
 		tok.Literal = ""
 		tok.Type = EOF
+		tok.Line = l.line
+		tok.Column = l.column
 	default:
 		if isLetter(l.ch) {
+			line, col := l.line, l.column
 			tok.Literal = l.readIdentifier()
 			tok.Type = lookupIdent(tok.Literal)
+			tok.Line = line
+			tok.Column = col
 			return tok
 		}
 		if isDigit(l.ch) {
+			line, col := l.line, l.column
 			tok.Literal = l.readNumber()
 			tok.Type = NUMBER
+			tok.Line = line
+			tok.Column = col
 			return tok
 		}
-		tok = Token{Type: ILLEGAL, Literal: string(l.ch)}
+		tok = l.newToken(ILLEGAL, string(l.ch))
 	}
 
 	l.readChar()
@@ -162,6 +188,10 @@ func (l *Lexer) readString() string {
 		}
 	}
 	return l.input[start:l.position]
+}
+
+func (l *Lexer) newToken(tokenType TokenType, literal string) Token {
+	return Token{Type: tokenType, Literal: literal, Line: l.line, Column: l.column}
 }
 
 var keywords = map[string]TokenType{

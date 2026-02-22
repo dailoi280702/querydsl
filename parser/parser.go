@@ -102,7 +102,7 @@ func (p *Parser) nextToken() {
 	p.peekToken = p.l.NextToken()
 
 	if p.curToken.Type == lexer.ILLEGAL {
-		p.errors = append(p.errors, fmt.Sprintf("illegal token: %s", p.curToken.Literal))
+		p.errors = append(p.errors, fmt.Sprintf("[%d:%d] illegal token: %s", p.curToken.Line, p.curToken.Column, p.curToken.Literal))
 	}
 }
 
@@ -120,8 +120,8 @@ func (p *Parser) expectPeek(t lexer.TokenType) bool {
 }
 
 func (p *Parser) peekError(t lexer.TokenType) {
-	msg := fmt.Sprintf("expected next token to be %s, got %s instead",
-		t, p.peekToken.Type)
+	msg := fmt.Sprintf("[%d:%d] expected next token to be %s, got %s instead",
+		p.peekToken.Line, p.peekToken.Column, t, p.peekToken.Type)
 	p.errors = append(p.errors, msg)
 }
 
@@ -181,7 +181,11 @@ func (p *Parser) curPrecedence() int {
 }
 
 func (p *Parser) parseIdentifier() ast.Expression {
-	return &ast.Identifier{Value: p.curToken.Literal}
+	return &ast.Identifier{
+		Value:  p.curToken.Literal,
+		Line:   p.curToken.Line,
+		Column: p.curToken.Column,
+	}
 }
 
 func (p *Parser) parsePrefixExpression() ast.Expression {
@@ -213,8 +217,10 @@ func (p *Parser) parseLiteral() ast.Expression {
 		litType = ast.NullLiteral
 	}
 	return &ast.Literal{
-		Value: p.curToken.Literal,
-		Type:  litType,
+		Value:  p.curToken.Literal,
+		Type:   litType,
+		Line:   p.curToken.Line,
+		Column: p.curToken.Column,
 	}
 }
 
@@ -274,6 +280,7 @@ func (p *Parser) parseExpressionList(end lexer.TokenType) []ast.Expression {
 }
 
 func (p *Parser) noPrefixParseFnError(t lexer.TokenType) {
-	msg := fmt.Sprintf("no prefix parse function for %s found", t)
+	msg := fmt.Sprintf("[%d:%d] no prefix parse function for %s found",
+		p.curToken.Line, p.curToken.Column, t)
 	p.errors = append(p.errors, msg)
 }
