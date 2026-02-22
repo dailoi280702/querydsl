@@ -2,6 +2,7 @@ package querydsl
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/dailoi280702/querydsl/parser/ast"
 )
@@ -71,6 +72,21 @@ func validateType(right ast.Expression, rule FieldRule) error {
 			actualType = "bool"
 		case ast.NullLiteral:
 			actualType = "null"
+		}
+	}
+
+	if actualType == "string" {
+		if rule.Type == "date" {
+			if _, err := time.Parse("2006-01-02", right.(*ast.Literal).Value); err != nil {
+				return &ValidationError{Message: "invalid date format, expected YYYY-MM-DD", Code: ErrTypeMismatch}
+			}
+			return nil
+		}
+		if rule.Type == "datetime" {
+			if _, err := time.Parse(time.RFC3339, right.(*ast.Literal).Value); err != nil {
+				return &ValidationError{Message: "invalid datetime format, expected RFC3339", Code: ErrTypeMismatch}
+			}
+			return nil
 		}
 	}
 

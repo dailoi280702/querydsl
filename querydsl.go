@@ -40,9 +40,15 @@ func (b *SQLBackend) Validate(node ast.Node, schema Schema) error {
 
 // Transpile converts an AST Node into a SQL WHERE clause and arguments.
 func (b *SQLBackend) Transpile(node ast.Node, cfg Config) (string, []any, error) {
+	fieldTypes := make(map[string]string)
+	for k, v := range cfg.Schema {
+		fieldTypes[k] = v.Type
+	}
+
 	sqlCfg := sql.Config{
 		FieldMap:      cfg.FieldMap,
 		AllowedFields: cfg.AllowedFields,
+		FieldTypes:    fieldTypes,
 		Placeholder:   cfg.Placeholder,
 	}
 	compiler := sql.New(sqlCfg)

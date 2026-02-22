@@ -1,4 +1,5 @@
 // Package ast defines the abstract syntax tree for the QueryDSL.
+//
 //nolint:revive
 package ast
 

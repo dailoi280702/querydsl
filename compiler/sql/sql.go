@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dailoi280702/querydsl/parser/ast"
 )
@@ -16,7 +17,8 @@ type Compiler struct {
 	Args          []any
 	fieldMap      map[string]string
 	allowedFields map[string]bool
-	placeholder   string // "?" or "$"
+	fieldTypes    map[string]string // New: field -> type
+	placeholder   string            // "?" or "$"
 	argCount      int
 }
 
@@ -24,7 +26,8 @@ type Compiler struct {
 type Config struct {
 	FieldMap      map[string]string
 	AllowedFields []string
-	Placeholder   string // "?" or "$"
+	FieldTypes    map[string]string // New
+	Placeholder   string            // "?" or "$"
 }
 
 // New creates a new Compiler instance.
@@ -33,6 +36,7 @@ func New(cfg ...Config) *Compiler {
 		Args:          []any{},
 		fieldMap:      make(map[string]string),
 		allowedFields: make(map[string]bool),
+		fieldTypes:    make(map[string]string),
 		placeholder:   "?",
 	}
 
@@ -41,6 +45,7 @@ func New(cfg ...Config) *Compiler {
 		for _, f := range cfg[0].AllowedFields {
 			c.allowedFields[f] = true
 		}
+		c.fieldTypes = cfg[0].FieldTypes
 		if cfg[0].Placeholder != "" {
 			c.placeholder = cfg[0].Placeholder
 		}
@@ -53,7 +58,7 @@ func New(cfg ...Config) *Compiler {
 func (c *Compiler) Compile(node ast.Node) (string, []any, error) {
 	c.Args = []any{} // reset args for fresh compile
 	c.argCount = 0   // reset counter
-	sql, err := c.walk(node)
+	sql, err := c.walk(node, "")
 	if err != nil {
 		return "", nil, err
 	}
@@ -68,7 +73,7 @@ func (c *Compiler) nextPlaceholder() string {
 	return fmt.Sprintf("$%d", c.argCount)
 }
 
-func (c *Compiler) walk(node ast.Node) (string, error) {
+func (c *Compiler) walk(node ast.Node, currentFieldType string) (string, error) {
 	switch n := node.(type) {
 	case *ast.InfixExpression:
 		return c.compileInfix(n)
@@ -94,7 +99,7 @@ func (c *Compiler) walk(node ast.Node) (string, error) {
 				}
 			}
 		}
-		return c.compilePrefix(n)
+		return c.compilePrefix(n, currentFieldType)
 	case *ast.Identifier:
 		fieldName := n.Value
 		if len(c.allowedFields) > 0 {
@@ -111,22 +116,39 @@ func (c *Compiler) walk(node ast.Node) (string, error) {
 		if err != nil {
 			return "", err
 		}
+
+		// Smart Conversion: If field is a date/datetime, convert string to time.Time
+		if n.Type == ast.StringLiteral {
+			if s, ok := val.(string); ok {
+				switch currentFieldType {
+				case "date":
+					if t, err := time.Parse("2006-01-02", s); err == nil {
+						val = t
+					}
+				case "datetime":
+					if t, err := time.Parse(time.RFC3339, s); err == nil {
+						val = t
+					}
+				}
+			}
+		}
+
 		c.Args = append(c.Args, val)
 		return c.nextPlaceholder(), nil
 	case *ast.ArrayLiteral:
-		return c.compileArray(n)
+		return c.compileArray(n, currentFieldType)
 	default:
 		return "", fmt.Errorf("unknown node type: %T", node)
 	}
 }
 
-func (c *Compiler) compilePrefix(n *ast.PrefixExpression) (string, error) {
+func (c *Compiler) compilePrefix(n *ast.PrefixExpression, currentFieldType string) (string, error) {
 	operator := n.Operator
 	if operator == "!" {
 		operator = "NOT "
 	}
 
-	right, err := c.walk(n.Right)
+	right, err := c.walk(n.Right, currentFieldType)
 	if err != nil {
 		return "", err
 	}
@@ -134,11 +156,11 @@ func (c *Compiler) compilePrefix(n *ast.PrefixExpression) (string, error) {
 	return fmt.Sprintf("(%s%s)", operator, right), nil
 }
 
-func (c *Compiler) compileArray(n *ast.ArrayLiteral) (string, error) {
+func (c *Compiler) compileArray(n *ast.ArrayLiteral, currentFieldType string) (string, error) {
 	var sb strings.Builder
 	sb.WriteString("(")
 	for i, e := range n.Elements {
-		ph, err := c.walk(e)
+		ph, err := c.walk(e, currentFieldType)
 		if err != nil {
 			return "", err
 		}
@@ -152,7 +174,12 @@ func (c *Compiler) compileArray(n *ast.ArrayLiteral) (string, error) {
 }
 
 func (c *Compiler) compileInfix(n *ast.InfixExpression) (string, error) {
-	left, err := c.walk(n.Left)
+	leftType := ""
+	if ident, ok := n.Left.(*ast.Identifier); ok {
+		leftType = c.fieldTypes[ident.Value]
+	}
+
+	left, err := c.walk(n.Left, "")
 	if err != nil {
 		return "", err
 	}
@@ -167,7 +194,7 @@ func (c *Compiler) compileInfix(n *ast.InfixExpression) (string, error) {
 		}
 	}
 
-	right, err := c.walk(n.Right)
+	right, err := c.walk(n.Right, leftType)
 	if err != nil {
 		return "", err
 	}
