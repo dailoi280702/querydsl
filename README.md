@@ -86,6 +86,22 @@ mise install
 go test ./...
 ```
 
+## Debugging (REPL)
+
+The library includes an interactive REPL to test your DSL strings and see the resulting AST and SQL.
+
+```bash
+go run examples/repl/main.go
+```
+
+Example session:
+```text
+dsl> name == "John" && age >= 18
+AST: ((name == John) && (age >= 18))
+SQL: ((name = $1) AND (age >= $2))
+Args: [John 18]
+```
+
 ## Security
 
 **Never** concatenate the returned `where` clause directly into a string. Always use the database driver's parameter passing:
