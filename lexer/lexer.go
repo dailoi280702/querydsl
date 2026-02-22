@@ -63,8 +63,10 @@ func (l *Lexer) NextToken() Token {
 			l.readChar()
 			tok = Token{Type: NEQ, Literal: "!="}
 		} else {
-			tok = Token{Type: ILLEGAL, Literal: "!"}
+			tok = Token{Type: NOT, Literal: "!"}
 		}
+	case '-':
+		tok = Token{Type: MINUS, Literal: "-"}
 	case '>':
 		if l.peekChar() == '=' {
 			l.readChar()

@@ -30,6 +30,10 @@ const (
 	// SIMILAR represents the similarity operator (%) in Postgres.
 	SIMILAR TokenType = "%"
 
+	// Prefix
+	MINUS TokenType = "-"
+	NOT   TokenType = "!"
+
 	LPAREN   TokenType = "("
 	RPAREN   TokenType = ")"
 	LBRACKET TokenType = "["

@@ -1,12 +1,14 @@
 // Package sql implements the SQL compiler for the QueryDSL.
+//
 //nolint:revive
 package sql
 
 import (
 	"fmt"
-	"github.com/dailoi280702/querydsl/parser/ast"
 	"strconv"
 	"strings"
+
+	"github.com/dailoi280702/querydsl/parser/ast"
 )
 
 // Compiler represents the SQL compiler.
@@ -70,6 +72,29 @@ func (c *Compiler) walk(node ast.Node) (string, error) {
 	switch n := node.(type) {
 	case *ast.InfixExpression:
 		return c.compileInfix(n)
+	case *ast.PrefixExpression:
+		// Optimization: Handle negative numbers as a single argument
+		if n.Operator == "-" {
+			if lit, ok := n.Right.(*ast.Literal); ok {
+				if lit.Type == ast.IntegerLiteral || lit.Type == ast.FloatLiteral {
+					val, err := c.parseLiteralValue(lit)
+					if err != nil {
+						return "", err
+					}
+					// Negate the value based on type
+					switch v := val.(type) {
+					case int64:
+						c.Args = append(c.Args, -v)
+					case float64:
+						c.Args = append(c.Args, -v)
+					default:
+						return "", fmt.Errorf("unexpected number type: %T", v)
+					}
+					return c.nextPlaceholder(), nil
+				}
+			}
+		}
+		return c.compilePrefix(n)
 	case *ast.Identifier:
 		fieldName := n.Value
 		if len(c.allowedFields) > 0 {
@@ -93,6 +118,20 @@ func (c *Compiler) walk(node ast.Node) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown node type: %T", node)
 	}
+}
+
+func (c *Compiler) compilePrefix(n *ast.PrefixExpression) (string, error) {
+	operator := n.Operator
+	if operator == "!" {
+		operator = "NOT "
+	}
+
+	right, err := c.walk(n.Right)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("(%s%s)", operator, right), nil
 }
 
 func (c *Compiler) compileArray(n *ast.ArrayLiteral) (string, error) {

@@ -1,12 +1,14 @@
 // Package parser implements the parser for the QueryDSL.
+//
 //nolint:revive
 package parser
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/dailoi280702/querydsl/lexer"
 	"github.com/dailoi280702/querydsl/parser/ast"
-	"strings"
 )
 
 const (
@@ -24,20 +26,19 @@ const (
 )
 
 var precedences = map[lexer.TokenType]int{
-	lexer.EQ:  EQUALS,
-	lexer.NEQ: EQUALS,
-	lexer.LT:  EQUALS,
-	lexer.LTE: EQUALS,
-	lexer.GT:  EQUALS,
-	lexer.GTE: EQUALS,
-	lexer.IN:  EQUALS,
-		lexer.LIKE:  EQUALS,
-		lexer.ILIKE: EQUALS,
-		lexer.SIMILAR: EQUALS,
-		lexer.AND:   AND,
-		lexer.OR:    OR,
-	}
-	
+	lexer.EQ:      EQUALS,
+	lexer.NEQ:     EQUALS,
+	lexer.LT:      EQUALS,
+	lexer.LTE:     EQUALS,
+	lexer.GT:      EQUALS,
+	lexer.GTE:     EQUALS,
+	lexer.IN:      EQUALS,
+	lexer.LIKE:    EQUALS,
+	lexer.ILIKE:   EQUALS,
+	lexer.SIMILAR: EQUALS,
+	lexer.AND:     AND,
+	lexer.OR:      OR,
+}
 
 type (
 	prefixParseFn func() ast.Expression
@@ -72,6 +73,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(lexer.NULL, p.parseLiteral)
 	p.registerPrefix(lexer.LPAREN, p.parseGroupedExpression)
 	p.registerPrefix(lexer.LBRACKET, p.parseArrayLiteral)
+	p.registerPrefix(lexer.MINUS, p.parsePrefixExpression)
+	p.registerPrefix(lexer.NOT, p.parsePrefixExpression)
 
 	p.infixParseFns = make(map[lexer.TokenType]infixParseFn)
 	p.registerInfix(lexer.EQ, p.parseInfixExpression)
@@ -179,6 +182,18 @@ func (p *Parser) curPrecedence() int {
 
 func (p *Parser) parseIdentifier() ast.Expression {
 	return &ast.Identifier{Value: p.curToken.Literal}
+}
+
+func (p *Parser) parsePrefixExpression() ast.Expression {
+	expression := &ast.PrefixExpression{
+		Operator: p.curToken.Literal,
+	}
+
+	p.nextToken()
+
+	expression.Right = p.ParseExpression(PREFIX)
+
+	return expression
 }
 
 func (p *Parser) parseLiteral() ast.Expression {

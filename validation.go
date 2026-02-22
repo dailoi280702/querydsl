@@ -2,6 +2,7 @@ package querydsl
 
 import (
 	"fmt"
+
 	"github.com/dailoi280702/querydsl/parser/ast"
 )
 
@@ -42,6 +43,8 @@ func walkValidate(node ast.Node, schema Schema, found map[string]bool) error {
 		if err := walkValidate(n.Left, schema, found); err != nil {
 			return err
 		}
+		return walkValidate(n.Right, schema, found)
+	case *ast.PrefixExpression:
 		return walkValidate(n.Right, schema, found)
 	case *ast.ArrayLiteral:
 		for _, e := range n.Elements {

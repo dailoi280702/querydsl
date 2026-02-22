@@ -75,6 +75,19 @@ func (al *ArrayLiteral) String() string {
 	return sb.String()
 }
 
+// PrefixExpression represents an expression with a prefix operator (e.g., -5, !true).
+type PrefixExpression struct {
+	Operator string
+	Right    Expression
+}
+
+func (pe *PrefixExpression) expressionNode() {}
+
+// String returns the string representation.
+func (pe *PrefixExpression) String() string {
+	return "(" + pe.Operator + pe.Right.String() + ")"
+}
+
 // InfixExpression represents an infix operation.
 type InfixExpression struct {
 	Left     Expression

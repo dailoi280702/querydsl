@@ -90,6 +90,24 @@ func TestToSQL(t *testing.T) {
 			expectedLen: 1,
 			wantErr:     false,
 		},
+		{
+			input:       `age == -5`,
+			expectedSQL: "(age = ?)",
+			expectedLen: 1,
+			wantErr:     false,
+		},
+		{
+			input:       `!(is_active == false)`,
+			expectedSQL: "(NOT (is_active = ?))",
+			expectedLen: 1,
+			wantErr:     false,
+		},
+		{
+			input:       `price < -10.5`,
+			expectedSQL: "(price < ?)",
+			expectedLen: 1,
+			wantErr:     false,
+		},
 		// Error cases
 		{
 			input:   `a == "abc" && (b == 1`,
