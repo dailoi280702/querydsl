@@ -473,6 +473,28 @@ func TestComplexInOperator(t *testing.T) {
 	}
 }
 
+func TestGetFields(t *testing.T) {
+	input := `name == "John" && (age > 18 || status == "active")`
+	node, _ := Parse(input)
+
+	fields := GetFields(node)
+	expected := map[string]bool{
+		"name":   true,
+		"age":    true,
+		"status": true,
+	}
+
+	if len(fields) != len(expected) {
+		t.Errorf("expected %d fields, got %d", len(expected), len(fields))
+	}
+
+	for _, f := range fields {
+		if !expected[f] {
+			t.Errorf("unexpected field found: %s", f)
+		}
+	}
+}
+
 func ExampleQueryTranspiler() {
 	var transpiler QueryTranspiler = NewSQLBackend()
 
