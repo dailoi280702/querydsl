@@ -1,0 +1,27 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - revive
+    - prealloc
+    - whitespace
+
+linters-settings:
+  revive:
+    rules:
+      - name: any-type
+
+issues:
+  exclude-rules:
+    - linters:
+        - revive
+      text: "var-naming: avoid package names"

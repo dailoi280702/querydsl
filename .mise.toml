@@ -1,0 +1,5 @@
+[tools]
+go = "1.24"
+golangci-lint = "latest"
+"go:github.com/daixiang0/gci" = "latest"
+"go:mvdan.cc/gofumpt" = "latest"
