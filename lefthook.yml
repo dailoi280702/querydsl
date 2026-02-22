@@ -1,0 +1,13 @@
+# Lefthook configuration (Husky + Lint-Staged alternative)
+pre-commit:
+  parallel: true
+  commands:
+    gci:
+      glob: "*.go"
+      run: gci write -s standard -s default -s "Prefix(querydsl)" {staged_files} && git add {staged_files}
+    gofumpt:
+      glob: "*.go"
+      run: gofumpt -w {staged_files} && git add {staged_files}
+    lint:
+      glob: "*.go"
+      run: golangci-lint run
