@@ -2,6 +2,9 @@ package querydsl
 
 import (
 	"errors"
+	"fmt"
+	"log/slog"
+	"os"
 	"querydsl/parser/ast"
 	"strings"
 	"testing"
@@ -360,4 +363,70 @@ func TestExtraBehavior(t *testing.T) {
 	if len(args) != 2 || args[1] != int64(123) {
 		t.Errorf("expected 2 args, second being 123, got %v", args)
 	}
+}
+
+func TestLogger(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	cfg := NewConfig().WithLogger(logger)
+
+	_, _, err := ToSQL(`name == "John"`, cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func ExampleQueryTranspiler() {
+	var transpiler QueryTranspiler = NewSQLBackend()
+
+	// 1. Service layer defines business validation
+	userSchema := Schema{
+		"name": FieldRule{Type: "string", Required: true},
+	}
+
+	// 2. Parse into AST Node
+	input := `name == "John"`
+	node, _ := transpiler.Parse(input)
+
+	// 3. Extra behavior: Add mandatory filter
+	orgIDNode := &ast.InfixExpression{
+		Left:     node.(ast.Expression),
+		Operator: "&&",
+		Right: &ast.InfixExpression{
+			Left:     &ast.Identifier{Value: "org_id"},
+			Operator: "==",
+			Right:    &ast.Literal{Value: "1", Type: ast.IntegerLiteral},
+		},
+	}
+
+	// 4. Validate
+	if err := transpiler.Validate(orgIDNode, userSchema); err != nil {
+		return
+	}
+
+	// 5. Repository layer adds DB mapping
+	cfg := NewConfig().WithMapping("name", "full_name").WithPostgres()
+
+	// 6. Transpile the modified AST
+	query, args, _ := transpiler.Transpile(orgIDNode, cfg)
+
+	fmt.Println("Query:", query)
+	fmt.Printf("Args: %v\n", args)
+
+	// Output:
+	// Query: ((full_name = $1) AND (org_id = $2))
+	// Args: [John 1]
+}
+
+func ExampleToSQL_errorHandling() {
+	cfg := NewConfig().WithAllowedFields([]string{"id"})
+
+	// Trying to access a field that isn't allowed
+	_, _, err := ToSQL(`password == "123456"`, cfg)
+
+	if errors.Is(err, ErrFieldNotAllowed) {
+		fmt.Println("Caught: Field not allowed")
+	}
+
+	// Output:
+	// Caught: Field not allowed
 }

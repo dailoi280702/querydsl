@@ -1,11 +1,14 @@
 package querydsl
 
+import "log/slog"
+
 // Config represents the configuration for the QueryDSL conversion.
 type Config struct {
 	FieldMap      map[string]string
 	AllowedFields []string
 	Placeholder   string // "?" or "$"
 	Schema        Schema
+	Logger        *slog.Logger
 }
 
 // NewConfig creates a new empty configuration.
@@ -36,6 +39,12 @@ func (c Config) WithAllowedFields(fields []string) Config {
 // WithPostgres switches placeholders to PostgreSQL style ($1, $2, ...).
 func (c Config) WithPostgres() Config {
 	c.Placeholder = "$"
+	return c
+}
+
+// WithLogger sets the logger for the config.
+func (c Config) WithLogger(l *slog.Logger) Config {
+	c.Logger = l
 	return c
 }
 

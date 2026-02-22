@@ -3,6 +3,7 @@ package querydsl
 
 import (
 	"fmt"
+	"log/slog"
 	"querydsl/compiler/sql"
 	"querydsl/lexer"
 	"querydsl/parser"
@@ -73,11 +74,6 @@ func Parse(input string) (ast.Node, error) {
 
 // ToSQL is a helper that performs the full pipeline from string to SQL.
 func ToSQL(input string, cfg ...Config) (string, []any, error) {
-	node, err := Parse(input)
-	if err != nil {
-		return "", nil, err
-	}
-
 	var activeCfg Config
 	if len(cfg) > 0 {
 		activeCfg = cfg[0]
@@ -85,12 +81,33 @@ func ToSQL(input string, cfg ...Config) (string, []any, error) {
 		activeCfg = NewConfig()
 	}
 
+	logger := activeCfg.Logger
+	if logger == nil {
+		logger = slog.Default()
+	}
+
+	logger.Debug("parsing QueryDSL input", "input", input)
+	node, err := Parse(input)
+	if err != nil {
+		logger.Error("failed to parse QueryDSL", "input", input, "err", err)
+		return "", nil, err
+	}
+
 	if activeCfg.Schema != nil {
+		logger.Debug("validating QueryDSL against schema")
 		if err := Validate(node, activeCfg.Schema); err != nil {
+			logger.Warn("validation failed", "err", err)
 			return "", nil, err
 		}
 	}
 
 	backend := NewSQLBackend()
-	return backend.Transpile(node, activeCfg)
+	sqlStr, args, err := backend.Transpile(node, activeCfg)
+	if err != nil {
+		logger.Error("transpilation failed", "err", err)
+		return "", nil, err
+	}
+
+	logger.Debug("successfully transpiled QueryDSL to SQL", "sql", sqlStr, "args_count", len(args))
+	return sqlStr, args, nil
 }

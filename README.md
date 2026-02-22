@@ -10,6 +10,7 @@ A robust, high-performance library for transpiling a human-readable Query DSL in
 - **Multi-Dialect:** Supports standard SQL (`?`) and PostgreSQL (`$1`, `$2`, ...) placeholders.
 - **Security:** Built-in field whitelisting, schema validation, and mapping.
 - **Builder Pattern:** Easily layer configurations across service and repository layers.
+- **Observability:** Built-in `log/slog` integration for debugging and production monitoring.
 - **QOL:** Case-insensitive keywords (`IN`, `NULL`, `TRUE`, `FALSE`) and UTF-8 support (Vietnamese).
 
 ## Installation
@@ -48,6 +49,18 @@ where, args, err := querydsl.ToSQL(`name == "John" && age >= 18`, cfg)
 // Args: ["John", 18]
 ```
 
+## Observability (Logging)
+
+You can pass a `slog.Logger` to gain insights into the parsing and transpilation process.
+
+```go
+logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+cfg := querydsl.NewConfig().WithLogger(logger)
+
+// Logs detailed debug info about parsing, validation, and final SQL
+where, args, err := querydsl.ToSQL(input, cfg)
+```
+
 ## Error Handling
 
 The library provides exported sentinel errors for precise checking:
@@ -61,6 +74,14 @@ if err != nil {
         // Handle type errors (e.g., string passed to an int field)
     }
 }
+```
+
+## Debugging (REPL)
+
+The library includes an interactive REPL to test your DSL strings and see the resulting AST and SQL.
+
+```bash
+go run examples/repl/main.go
 ```
 
 ## Supported Syntax
@@ -84,22 +105,6 @@ This project uses `mise` for tool management.
 export GITHUB_TOKEN=$(gh auth token)
 mise install
 go test ./...
-```
-
-## Debugging (REPL)
-
-The library includes an interactive REPL to test your DSL strings and see the resulting AST and SQL.
-
-```bash
-go run examples/repl/main.go
-```
-
-Example session:
-```text
-dsl> name == "John" && age >= 18
-AST: ((name == John) && (age >= 18))
-SQL: ((name = $1) AND (age >= $2))
-Args: [John 18]
 ```
 
 ## Security
