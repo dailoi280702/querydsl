@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/dailoi280702/querydsl/compiler/elastic"
 	"github.com/dailoi280702/querydsl/compiler/sql"
 	"github.com/dailoi280702/querydsl/lexer"
 	"github.com/dailoi280702/querydsl/parser"
@@ -65,6 +66,33 @@ func (b *SQLBackend) Transpile(node ast.Node, cfg Config) (string, []any, error)
 		return "", nil, err
 	}
 	return sqlStr, args, nil
+}
+
+// ElasticBackend implements compilation for Elasticsearch.
+type ElasticBackend struct{}
+
+// NewElasticBackend creates a new Elasticsearch transpiler backend.
+func NewElasticBackend() *ElasticBackend {
+	return &ElasticBackend{}
+}
+
+// Parse converts a string into an AST Node.
+func (b *ElasticBackend) Parse(input string) (ast.Node, error) {
+	return Parse(input)
+}
+
+// Validate checks an AST Node against a schema.
+func (b *ElasticBackend) Validate(node ast.Node, schema Schema) error {
+	return Validate(node, schema)
+}
+
+// Transpile converts an AST Node into an Elasticsearch query map.
+func (b *ElasticBackend) Transpile(node ast.Node, cfg Config) (map[string]any, error) {
+	elasticCfg := elastic.Config{
+		FieldMap: cfg.FieldMap,
+	}
+	compiler := elastic.New(elasticCfg)
+	return compiler.Compile(node)
 }
 
 // Parse converts a DSL string into an AST Node.

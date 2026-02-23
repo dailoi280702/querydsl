@@ -66,7 +66,28 @@ cfg := querydsl.NewConfig().
     WithMapping("userEmail", "email_address")
 ```
 
-## 4. Testing Strategy
+## 4. Using with Elasticsearch
+
+The `ElasticBackend` returns a `map[string]any` which can be encoded directly for the official Go client.
+
+```go
+backend := querydsl.NewElasticBackend()
+query, _ := backend.Transpile(node, cfg)
+
+body := map[string]any{
+    "query": query,
+}
+
+var buf bytes.Buffer
+json.NewEncoder(&buf).Encode(body)
+
+res, _ := es.Search(
+    es.Search.WithIndex("my_index"),
+    es.Search.WithBody(&buf),
+)
+```
+
+## 5. Testing Strategy
 
 ### Mocking the Transpiler
 Since `QueryTranspiler` is an interface, you can mock it in your Service layer tests to verify that the service is passing the correct `Schema` or adding the correct `tenant_id` filter.
