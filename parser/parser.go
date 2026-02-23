@@ -20,25 +20,29 @@ const (
 	// AND represents the precedence of the AND operator.
 	AND
 	// EQUALS represents the precedence of comparison operators.
-	EQUALS
-	// PREFIX represents the precedence of prefix operators.
-	PREFIX
-)
-
-var precedences = map[lexer.TokenType]int{
-	lexer.EQ:      EQUALS,
-	lexer.NEQ:     EQUALS,
-	lexer.LT:      EQUALS,
-	lexer.LTE:     EQUALS,
-	lexer.GT:      EQUALS,
-	lexer.GTE:     EQUALS,
-	lexer.IN:      EQUALS,
-	lexer.LIKE:    EQUALS,
-	lexer.ILIKE:   EQUALS,
-	lexer.SIMILAR: EQUALS,
-	lexer.AND:     AND,
-	lexer.OR:      OR,
-}
+		EQUALS
+		// PREFIX represents the precedence of prefix operators.
+		PREFIX
+		// CALL represents the precedence of function calls.
+		CALL
+	)
+	
+	var precedences = map[lexer.TokenType]int{
+		lexer.EQ:      EQUALS,
+		lexer.NEQ:     EQUALS,
+		lexer.LT:      EQUALS,
+		lexer.LTE:     EQUALS,
+		lexer.GT:      EQUALS,
+		lexer.GTE:     EQUALS,
+		lexer.IN:      EQUALS,
+		lexer.LIKE:    EQUALS,
+		lexer.ILIKE:   EQUALS,
+		lexer.SIMILAR: EQUALS,
+		lexer.AND:     AND,
+		lexer.OR:      OR,
+		lexer.LPAREN:  CALL,
+	}
+	
 
 type (
 	prefixParseFn func() ast.Expression
@@ -89,6 +93,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(lexer.SIMILAR, p.parseInfixExpression)
 	p.registerInfix(lexer.AND, p.parseInfixExpression)
 	p.registerInfix(lexer.OR, p.parseInfixExpression)
+	p.registerInfix(lexer.LPAREN, p.parseCallExpression)
 
 	// Read two tokens, so curToken and peekToken are both set
 	p.nextToken()
@@ -235,6 +240,12 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 	expression.Right = p.ParseExpression(precedence)
 
 	return expression
+}
+
+func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
+	exp := &ast.CallExpression{Function: function.String()}
+	exp.Arguments = p.parseExpressionList(lexer.RPAREN)
+	return exp
 }
 
 func (p *Parser) parseGroupedExpression() ast.Expression {

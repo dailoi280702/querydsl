@@ -14,6 +14,8 @@ var (
 	ErrTypeMismatch = errors.New("type mismatch")
 	// ErrFieldNotAllowed is returned when a field is not in the allowed list or schema.
 	ErrFieldNotAllowed = errors.New("field not allowed")
+	// ErrFunctionNotAllowed is returned when a function is not in the allowed list.
+	ErrFunctionNotAllowed = errors.New("function not allowed")
 )
 
 // ParserError represents errors that occur during parsing.

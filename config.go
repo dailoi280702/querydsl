@@ -1,18 +1,20 @@
 package querydsl
 
 import (
-	"github.com/dailoi280702/querydsl/compiler/sql"
 	"log/slog"
+
+	"github.com/dailoi280702/querydsl/compiler/sql"
 )
 
 // Config represents the configuration for the QueryDSL conversion.
 type Config struct {
-	FieldMap      map[string]string
-	AllowedFields []string
-	Placeholder   string // "?" or "$"
-	Schema        Schema
-	Logger        *slog.Logger
-	CustomInfixes []sql.CustomInfix
+	FieldMap         map[string]string
+	AllowedFields    []string
+	AllowedFunctions []string
+	Placeholder      string // "?" or "$"
+	Schema           Schema
+	Logger           *slog.Logger
+	CustomInfixes    []sql.CustomInfix
 }
 
 // NewConfig creates a new empty configuration.
@@ -37,6 +39,12 @@ func (c Config) WithMapping(from, to string) Config {
 // WithAllowedFields sets the list of allowed fields.
 func (c Config) WithAllowedFields(fields []string) Config {
 	c.AllowedFields = fields
+	return c
+}
+
+// WithAllowedFunctions sets the list of allowed functions.
+func (c Config) WithAllowedFunctions(fns []string) Config {
+	c.AllowedFunctions = fns
 	return c
 }
 

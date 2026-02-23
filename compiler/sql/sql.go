@@ -17,38 +17,44 @@ type CustomInfix func(n *ast.InfixExpression, walk func(ast.Node, string) (strin
 
 // Compiler represents the SQL compiler.
 type Compiler struct {
-	Args          []any
-	fieldMap      map[string]string
-	allowedFields map[string]bool
-	fieldTypes    map[string]string // field -> type
-	placeholder   string            // "?" or "$"
-	argCount      int
-	customInfixes []CustomInfix
+	Args             []any
+	fieldMap         map[string]string
+	allowedFields    map[string]bool
+	fieldTypes       map[string]string // field -> type
+	allowedFunctions map[string]bool
+	placeholder      string // "?" or "$"
+	argCount         int
+	customInfixes    []CustomInfix
 }
 
 // Config represents the configuration for the SQL compiler.
 type Config struct {
-	FieldMap      map[string]string
-	AllowedFields []string
-	FieldTypes    map[string]string
-	Placeholder   string // "?" or "$"
-	CustomInfixes []CustomInfix
+	FieldMap         map[string]string
+	AllowedFields    []string
+	FieldTypes       map[string]string
+	AllowedFunctions []string
+	Placeholder      string // "?" or "$"
+	CustomInfixes    []CustomInfix
 }
 
 // New creates a new Compiler instance.
 func New(cfg ...Config) *Compiler {
 	c := &Compiler{
-		Args:          []any{},
-		fieldMap:      make(map[string]string),
-		allowedFields: make(map[string]bool),
-		fieldTypes:    make(map[string]string),
-		placeholder:   "?",
+		Args:             []any{},
+		fieldMap:         make(map[string]string),
+		allowedFields:    make(map[string]bool),
+		fieldTypes:       make(map[string]string),
+		allowedFunctions: make(map[string]bool),
+		placeholder:      "?",
 	}
 
 	if len(cfg) > 0 {
 		c.fieldMap = cfg[0].FieldMap
 		for _, f := range cfg[0].AllowedFields {
 			c.allowedFields[f] = true
+		}
+		for _, f := range cfg[0].AllowedFunctions {
+			c.allowedFunctions[f] = true
 		}
 		c.fieldTypes = cfg[0].FieldTypes
 		if cfg[0].Placeholder != "" {
@@ -143,9 +149,36 @@ func (c *Compiler) walk(node ast.Node, currentFieldType string) (string, error) 
 		return c.nextPlaceholder(), nil
 	case *ast.ArrayLiteral:
 		return c.compileArray(n, currentFieldType)
+	case *ast.CallExpression:
+		return c.compileCall(n)
 	default:
 		return "", fmt.Errorf("unknown node type: %T", node)
 	}
+}
+
+func (c *Compiler) compileCall(n *ast.CallExpression) (string, error) {
+	// Security check: only allow approved functions
+	if len(c.allowedFunctions) > 0 {
+		if !c.allowedFunctions[n.Function] {
+			return "", fmt.Errorf("function not allowed: %s", n.Function)
+		}
+	}
+
+	var sb strings.Builder
+	sb.WriteString(n.Function)
+	sb.WriteString("(")
+	for i, arg := range n.Arguments {
+		sqlStr, err := c.walk(arg, "")
+		if err != nil {
+			return "", err
+		}
+		sb.WriteString(sqlStr)
+		if i < len(n.Arguments)-1 {
+			sb.WriteString(", ")
+		}
+	}
+	sb.WriteString(")")
+	return sb.String(), nil
 }
 
 func (c *Compiler) compilePrefix(n *ast.PrefixExpression, currentFieldType string) (string, error) {

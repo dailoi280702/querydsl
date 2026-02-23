@@ -385,6 +385,62 @@ func TestExtraBehavior(t *testing.T) {
 	}
 }
 
+func TestGetFields(t *testing.T) {
+	input := `name == "John" && (age > 18 || status == "active")`
+	node, _ := Parse(input)
+
+	fields := GetFields(node)
+	expected := map[string]bool{
+		"name":   true,
+		"age":    true,
+		"status": true,
+	}
+
+	if len(fields) != len(expected) {
+		t.Errorf("expected %d fields, got %d", len(expected), len(fields))
+	}
+
+	for _, f := range fields {
+		if !expected[f] {
+			t.Errorf("unexpected field found: %s", f)
+		}
+	}
+}
+
+func TestFunctionCalls(t *testing.T) {
+	cfg := NewConfig().WithAllowedFunctions([]string{"lower", "trim"})
+
+	t.Run("Allowed function", func(t *testing.T) {
+		input := `lower(name) == "john"`
+		sql, _, err := ToSQL(input, cfg)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != "(lower(name) = ?)" {
+			t.Errorf("expected SQL=(lower(name) = ?), got %q", sql)
+		}
+	})
+
+	t.Run("Not allowed function", func(t *testing.T) {
+		input := `danger_func(name) == "john"`
+		_, _, err := ToSQL(input, cfg)
+		if !errors.Is(err, ErrFunctionNotAllowed) {
+			t.Errorf("expected ErrFunctionNotAllowed, got %v", err)
+		}
+	})
+
+	t.Run("Nested functions", func(t *testing.T) {
+		input := `lower(trim(name)) == "john"`
+		sql, _, err := ToSQL(input, cfg)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != "(lower(trim(name)) = ?)" {
+			t.Errorf("expected SQL=(lower(trim(name)) = ?), got %q", sql)
+		}
+	})
+}
+
 func TestCustomInfixHook(t *testing.T) {
 	customHook := func(n *ast.InfixExpression, walk func(ast.Node, string) (string, error)) (string, bool, error) {
 		// Only apply special logic if operator is % and field is "name"
@@ -500,28 +556,6 @@ func TestComplexInOperator(t *testing.T) {
 
 	if len(args) != 4 {
 		t.Errorf("expected 4 args, got %d", len(args))
-	}
-}
-
-func TestGetFields(t *testing.T) {
-	input := `name == "John" && (age > 18 || status == "active")`
-	node, _ := Parse(input)
-
-	fields := GetFields(node)
-	expected := map[string]bool{
-		"name":   true,
-		"age":    true,
-		"status": true,
-	}
-
-	if len(fields) != len(expected) {
-		t.Errorf("expected %d fields, got %d", len(expected), len(fields))
-	}
-
-	for _, f := range fields {
-		if !expected[f] {
-			t.Errorf("unexpected field found: %s", f)
-		}
 	}
 }
 

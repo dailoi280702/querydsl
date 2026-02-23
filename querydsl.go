@@ -46,17 +46,21 @@ func (b *SQLBackend) Transpile(node ast.Node, cfg Config) (string, []any, error)
 	}
 
 	sqlCfg := sql.Config{
-		FieldMap:      cfg.FieldMap,
-		AllowedFields: cfg.AllowedFields,
-		FieldTypes:    fieldTypes,
-		Placeholder:   cfg.Placeholder,
-		CustomInfixes: cfg.CustomInfixes,
+		FieldMap:         cfg.FieldMap,
+		AllowedFields:    cfg.AllowedFields,
+		AllowedFunctions: cfg.AllowedFunctions,
+		FieldTypes:       fieldTypes,
+		Placeholder:      cfg.Placeholder,
+		CustomInfixes:    cfg.CustomInfixes,
 	}
 	compiler := sql.New(sqlCfg)
 	sqlStr, args, err := compiler.Compile(node)
 	if err != nil {
 		if strings.Contains(err.Error(), "field not allowed") {
 			return "", nil, fmt.Errorf("%w: %s", ErrFieldNotAllowed, err.Error())
+		}
+		if strings.Contains(err.Error(), "function not allowed") {
+			return "", nil, fmt.Errorf("%w: %s", ErrFunctionNotAllowed, err.Error())
 		}
 		return "", nil, err
 	}

@@ -93,6 +93,29 @@ func (pe *PrefixExpression) String() string {
 	return "(" + pe.Operator + pe.Right.String() + ")"
 }
 
+// CallExpression represents a function call (e.g., lower(name)).
+type CallExpression struct {
+	Function  string
+	Arguments []Expression
+}
+
+func (ce *CallExpression) expressionNode() {}
+
+// String returns the string representation.
+func (ce *CallExpression) String() string {
+	var sb strings.Builder
+	sb.WriteString(ce.Function)
+	sb.WriteString("(")
+	for i, arg := range ce.Arguments {
+		sb.WriteString(arg.String())
+		if i < len(ce.Arguments)-1 {
+			sb.WriteString(", ")
+		}
+	}
+	sb.WriteString(")")
+	return sb.String()
+}
+
 // InfixExpression represents an infix operation.
 type InfixExpression struct {
 	Left     Expression
