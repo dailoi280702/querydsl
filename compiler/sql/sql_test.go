@@ -6,6 +6,7 @@ import (
 
 	"github.com/dailoi280702/querydsl/lexer"
 	"github.com/dailoi280702/querydsl/parser"
+	"github.com/dailoi280702/querydsl/parser/ast"
 )
 
 func TestCompile(t *testing.T) {
@@ -48,4 +49,60 @@ func TestCompile(t *testing.T) {
 	if args[2] != 100.100 {
 		t.Errorf("expected args[2]=%v, got %v", 100.100, args[2])
 	}
+}
+
+func TestCompileCall(t *testing.T) {
+	c := New(Config{
+		AllowedFunctions: []string{"lower", "trim"},
+	})
+
+	t.Run("Allowed function", func(t *testing.T) {
+		call := &ast.CallExpression{
+			Function: "lower",
+			Arguments: []ast.Expression{
+				&ast.Identifier{Value: "name"},
+			},
+		}
+		sql, _, err := c.Compile(call)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != "lower(name)" {
+			t.Errorf("expected lower(name), got %q", sql)
+		}
+	})
+
+	t.Run("Not allowed function", func(t *testing.T) {
+		call := &ast.CallExpression{
+			Function: "danger",
+			Arguments: []ast.Expression{
+				&ast.Identifier{Value: "name"},
+			},
+		}
+		_, _, err := c.Compile(call)
+		if err == nil {
+			t.Fatal("expected error for unauthorized function, got nil")
+		}
+	})
+
+	t.Run("Nested allowed functions", func(t *testing.T) {
+		call := &ast.CallExpression{
+			Function: "lower",
+			Arguments: []ast.Expression{
+				&ast.CallExpression{
+					Function: "trim",
+					Arguments: []ast.Expression{
+						&ast.Identifier{Value: "name"},
+					},
+				},
+			},
+		}
+		sql, _, err := c.Compile(call)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if sql != "lower(trim(name))" {
+			t.Errorf("expected lower(trim(name)), got %q", sql)
+		}
+	})
 }
