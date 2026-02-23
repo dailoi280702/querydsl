@@ -87,11 +87,12 @@ func (r *UserPostgresRepo) FindAll(_ context.Context, node ast.Node, cfg queryds
 		return "", false, nil
 	}
 
-	// 2. Add Infrastructure details (Field Mapping + Dialect + Custom Hook)
+	// 2. Add Infrastructure details (Field Mapping + Dialect + Custom Hook + Allowed Functions)
 	cfg = cfg.
 		WithMapping("name", "full_name").
 		WithPostgres().
-		WithCustomInfix(customSimilarityHook)
+		WithCustomInfix(customSimilarityHook).
+		WithAllowedFunctions([]string{"lower", "trim"})
 
 	// 3. Perform the actual transpilation using the node
 	where, args, err := r.transpiler.Transpile(node, cfg)

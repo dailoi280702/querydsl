@@ -28,7 +28,10 @@ func main() {
 		return "", false, nil
 	}
 
-	cfg := querydsl.NewConfig().WithPostgres().WithCustomInfix(customHook)
+	cfg := querydsl.NewConfig().
+		WithPostgres().
+		WithCustomInfix(customHook).
+		WithAllowedFunctions([]string{"lower", "trim"})
 
 	for {
 		fmt.Print("dsl> ")
